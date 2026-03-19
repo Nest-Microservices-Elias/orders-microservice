@@ -4,21 +4,21 @@ import { PrismaService } from 'src/prisma.service'
 import { ClientProxy, RpcException } from '@nestjs/microservices'
 import { OrderPaginationDto } from './dto/order-pagination.dto'
 import { ChangeOrderStatusDto } from './dto'
-import { PRODUCT_SERVICE } from 'src/config'
+import { NATS_SERVICE, PRODUCT_SERVICE } from 'src/config'
 import { firstValueFrom } from 'rxjs'
 
 @Injectable()
 export class OrdersService {
   constructor(
     private prisma: PrismaService,
-    @Inject(PRODUCT_SERVICE) private productsClient: ClientProxy,
+    @Inject(NATS_SERVICE) private client: ClientProxy,
   ) {}
   async create(createOrderDto: CreateOrderDto) {
     try {
       //1. confirmar los ids de los productos
       const productIds = createOrderDto.items.map((item) => item.productId)
       const products: any[] = await firstValueFrom(
-        this.productsClient.send({ cmd: 'validate_products' }, productIds),
+        this.client.send({ cmd: 'validate_products' }, productIds),
       )
       //2. calculos de los valores
       const totalAmount = createOrderDto.items.reduce((acc, ordenItem) => {
@@ -123,7 +123,7 @@ export class OrdersService {
 
     const productIds = order.OrderItem.map((orderItem) => orderItem.productId)
     const products: any[] = await firstValueFrom(
-      this.productsClient.send({ cmd: 'validate_products' }, productIds),
+      this.client.send({ cmd: 'validate_products' }, productIds),
     )
     return {
       ...order,
